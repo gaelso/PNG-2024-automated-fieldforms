@@ -1,0 +1,199 @@
+---
+title: " "
+format:
+  pdf:
+    documentclass: article
+    classoption: landscape
+    papersize: "a4"
+    fontsize: "8pt"
+    mainfont: Arial
+ #   monofont: Fira Code
+    geometry: 
+      #- showframe
+      - top=10mm
+      - bottom=10mm
+      - left=10mm
+      - right=10mm
+      - heightrounded
+    # margin-left: "1cm"
+    # margin-right: "1cm"
+    # margin-top: "1cm"
+    # margin-bottom: "1cm"
+    include-in-header: 
+      text: 
+        \usepackage{makecell}
+    
+editor: source
+keep-tex: true
+---
+
+```{r, include=FALSE}
+## Calculated variables
+library(dplyr)
+library(kableExtra)
+# https://stackoverflow.com/questions/44486493/produce-a-table-spanning-multiple-pages-using-kable
+
+
+plot_code     <- "OOMSI01"
+plot_location <- "OOMSIS"
+
+dat <- tibble(read.csv("dat1.csv"))
+# dat <- tibble(
+#   quadrat = "02",
+#   tree_no = 1:40,
+#   tree_species = LETTERS[1:40],
+#   sf = c("?", rep("", 37), "?", ""),
+#   tree_condition = rep(LETTERS[11:20], 4),
+#   coord_east = sample(100:200, 40, replace = F),
+#   coord_north = sample(200:300, 40, replace = F),
+#   tree_dbh_pom = 1.3,
+#   tree_dbh_previous = sample(15:100, 40, replace = T)
+# )
+
+dat <- dat  |>  
+    mutate(across(everything(), as.character))
+
+# add 10 empty rows
+for (j in 1:10) dat <- add_row(dat,.after = nrow(dat))
+
+dat[(nrow(dat)-10):nrow(dat),] <- ""
+dat$quadrat <- dat$quadrat[[1]] 
+
+
+col_empty <- c(
+   "tree_dbh_current", "DBH_DF", "tree_status", "stem_form", "crown_position", "crown_form", "crown_d1",
+   "crown_d2","height_distance", "height_pom","height_merH","height_CrB","height_TotH" 
+   )
+
+col_names <- c(
+  "Qua-\ndrat", "Tree\nNo.", "Species\nCode", "SF", "Tree\nCond.", "East\n(m)", "North\n(m)", "POM\n(m)",
+  "Previous\n(cm)", "Current\n(cm)", "DF", "Tree\nStatus", "Stem\nForm","Posi\ntion","Form","d1","d2","Dist\n(m)",
+  "POM","Mer H","Cr B","Tot H" 
+)
+
+full_table <- list()
+
+# max 30 rows per page, otherwise split data into 2 tables. Max Tree Number in data now is 47.
+if (nrow(dat) > 30) {
+  nPages <- 2
+  full_table[[1]] <- dat[1:30,]  
+  full_table[[2]] <- dat[31:nrow(dat),]   
+  full_table[[1]][, col_empty] <- ""
+  full_table[[2]][, col_empty] <- ""
+} else {
+  nPages <- 1
+  full_table[[1]] <- dat 
+  full_table[[1]][, col_empty] <- ""
+}
+
+## add column number as first row
+full_table3 <- list()
+for (i in 1:nPages){
+  full_table3[[i]] <- setNames(paste0("(", 1:22, ")"), names(full_table[[i]])) |> 
+    bind_rows(full_table[[i]])
+}
+
+
+```
+
+<!-- TITLE COLUMN -->
+
+:::::::: {layout="[0.2, 0.6, 0.2]"}
+::: {.column width="20%"}
+Form: **PSP/PNGFRI**
+:::
+
+:::: {.column width="60%"}
+::: {.center data-latex=""}
+**PLOT REASSESSMENT AND TREE DESCRIPTION**
+:::
+::::
+
+:::: {.column width="20%"}
+::: {.flushright data-latex=""}
+Page \_\_\_ of \_\_\_
+:::
+::::
+::::::::
+
+::::: {layout="[1]"}
+:::: {.column width="100%"}
+::: {.center data-latex=""}
+**Open Foris Arena, FAO**
+:::
+::::
+:::::
+
+<!-- First line -->
+
+::::::::: {layout="[0.2, 0.2, 0.2, 0.2, 0.2]"}
+::: {.column width="20%"}
+PSP ID: **`{r} plot_code`**
+:::
+
+::: {.column width="20%"}
+Location: **`{r} plot_location`**
+:::
+
+::: {.column width="15%"}
+ 
+:::
+
+::: {.column width="25%"}
+Assessed by: .......................
+:::
+
+:::: {.column width="20%"}
+::: {.flushright data-latex=""}
+Date: ..... / ..... / .......
+:::
+::::
+:::::::::
+
+<!-- TABLE -->
+
+```{r, echo=F }
+
+kbl_field_form <- list()
+
+for (i in 1:nPages) {
+  ## Style 1srt row same as headers
+  vec_row1 <- c(T, rep(F, nrow(full_table3[[i]]) - 1)) 
+  
+  kbl_field_form[[i]] <- full_table3[[i]] |>
+    kbl(
+      col.names = linebreak(col_names),
+      escape = F,
+      booktabs = F,
+#      longtable = TRUE,
+      align = "c"
+    ) |> 
+    kable_styling(
+      font_size = 10, 
+      #bootstrap_options = "condensed",
+      latex_options = c("HOLD_position","scale_up") # "repeat_header"
+    ) |>
+      add_header_above(
+      c(" " = 1," " = 1," " = 1," " = 1," " = 1," " = 1," " = 1," " = 1," " = 1," " = 1," " = 1," " = 1," " = 1," " = 1," " = 1, 
+        "Diameter (cm)" = 2," " = 1, "Angle (percent)" = 4),
+      border_left = T, border_right = T, bold = F
+    ) |>
+    add_header_above(
+      c(" " = 1, " " = 1," " = 1," " = 1," " = 1,"Coordinates" = 2, "DBH/DAB" = 4, " " = 1, " " = 1,
+        "Crown " = 4, "Height" = 5),
+      border_left = T, border_right = T, bold = F
+    ) |>
+    row_spec(0, bold = F) |>
+    column_spec(1, border_left = T, bold = F, monospace = !vec_row1) |>
+    column_spec(2:9,  monospace = !vec_row1) |>
+    column_spec(22, border_right = T) |>
+    row_spec(1, bold = F) 
+
+}
+
+kbl_field_form[[1]]
+if (nPages==2) kbl_field_form[[2]]
+
+
+
+```
